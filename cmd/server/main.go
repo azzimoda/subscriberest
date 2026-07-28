@@ -1,9 +1,16 @@
+// @title           SubscribeREST API
+// @version         1.0
+// @description     API для управления подписками пользователей
+// @host            localhost:8080
+// @BasePath        /api/v1
+
 package main
 
 import (
 	"fmt"
 
 	"github.com/azzimoda/subscriberest/internal/handler"
+	_ "github.com/azzimoda/subscriberest/docs"
 	"github.com/azzimoda/subscriberest/internal/model"
 	"github.com/azzimoda/subscriberest/internal/repository"
 	"github.com/azzimoda/subscriberest/internal/router"
@@ -17,8 +24,6 @@ import (
 	"gorm.io/gorm"
 	glogger "gorm.io/gorm/logger"
 )
-
-// TODO: Swagger documentation.
 
 func main() {
 	config.Init()

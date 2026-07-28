@@ -18,6 +18,63 @@ func NewHandler(service *service.SubscriptionService) *Handler { return &Handler
 
 type Handler struct{ service *service.SubscriptionService }
 
+type CreateSubscriptionRequest struct {
+	ServiceName string    `json:"service_name" example:"Netflix"`
+	Price       int       `json:"price" example:"999" minimum:"0"`
+	UserID      uuid.UUID `json:"user_id" example:"550e8400-e29b-41d4-a716-446655440000"`
+	StartDate   string    `json:"start_date" example:"2026-01"`
+	EndDate     *string   `json:"end_date,omitempty" example:"2026-12"`
+}
+
+type UpdateSubscriptionRequest struct {
+	ServiceName *string    `json:"service_name,omitempty" example:"Netflix"`
+	Price       *int       `json:"price,omitempty" example:"999" minimum:"0"`
+	UserID      *uuid.UUID `json:"user_id,omitempty" example:"550e8400-e29b-41d4-a716-446655440000"`
+	StartDate   *string    `json:"start_date,omitempty" example:"2026-01"`
+	EndDate     *string    `json:"end_date,omitempty" example:"2026-12"`
+}
+
+type CreateSubscriptionResponse struct {
+	ID      string `json:"id" example:"550e8400-e29b-41d4-a716-446655440000"`
+	Message string `json:"message" example:"created"`
+}
+
+type ErrorResponse struct {
+	Error string `json:"error" example:"invalid subscription ID format, expected UUID"`
+}
+
+type PaginationMeta struct {
+	Total  int `json:"total" example:"10"`
+	Limit  int `json:"limit" example:"10"`
+	Offset int `json:"offset" example:"0"`
+}
+
+type ListSubscriptionsResponse struct {
+	Data []model.Subscription `json:"data"`
+	Meta PaginationMeta       `json:"meta"`
+}
+
+type StatsMeta struct {
+	UserID      string `json:"user_id" example:"550e8400-e29b-41d4-a716-446655440000"`
+	ServiceName string `json:"service_name" example:"Netflix"`
+	StartDate   string `json:"start_date" example:"2026-01"`
+	EndDate     string `json:"end_date" example:"2026-06"`
+}
+
+type GetStatsResponse struct {
+	Result int       `json:"result" example:"2997"`
+	Meta   StatsMeta `json:"meta"`
+}
+
+// @Summary      Create a subscription
+// @Description  Create a new subscription for a user
+// @Tags         subscriptions
+// @Accept       json
+// @Produce      json
+// @Param        request body CreateSubscriptionRequest true "Subscription data"
+// @Success      201  {object}  CreateSubscriptionResponse
+// @Failure      400  {object}  ErrorResponse
+// @Router       /subscriptions [post]
 func (h *Handler) CreateSubscription(c *gin.Context) {
 	ctx := c.Request.Context()
 
@@ -65,16 +122,15 @@ func (h *Handler) CreateSubscription(c *gin.Context) {
 	c.JSON(http.StatusCreated, gin.H{"id": sub.ID.String(), "message": "created"})
 }
 
-// GetSubscription godoc
 // @Summary      Get subscription by ID
 // @Description  Returns a subscription by its UUID
 // @Tags         subscriptions
 // @Produce      json
 // @Param        id  path      string  true  "Subscription ID (UUID)"
-// @Success      200 {object}  model.Subscription
-// @Failure      400 {object}  map[string]string
-// @Failure      404 {object}  map[string]string
-// @Router       /api/v1/subscriptions/{id} [get]
+// @Success      200  {object}  model.Subscription
+// @Failure      400  {object}  ErrorResponse
+// @Failure      404  {object}  ErrorResponse
+// @Router       /subscriptions/{id} [get]
 func (h *Handler) GetSubscription(c *gin.Context) {
 	ctx := c.Request.Context()
 
@@ -103,6 +159,17 @@ func (h *Handler) GetSubscription(c *gin.Context) {
 	c.JSON(http.StatusOK, subscription)
 }
 
+// @Summary      Update a subscription
+// @Description  Update an existing subscription by ID. All fields are optional — only provided fields will be updated.
+// @Tags         subscriptions
+// @Accept       json
+// @Produce      json
+// @Param        id       path   string                     true  "Subscription ID (UUID)"
+// @Param        request  body   UpdateSubscriptionRequest  true  "Updated subscription data"
+// @Success      200  {object}  model.Subscription
+// @Failure      400  {object}  ErrorResponse
+// @Failure      404  {object}  ErrorResponse
+// @Router       /subscriptions/{id} [put]
 func (h *Handler) UpdateSubscription(c *gin.Context) {
 	ctx := c.Request.Context()
 
@@ -185,6 +252,15 @@ func (h *Handler) UpdateSubscription(c *gin.Context) {
 	c.JSON(http.StatusOK, existing)
 }
 
+// @Summary      Delete a subscription
+// @Description  Delete a subscription by ID
+// @Tags         subscriptions
+// @Produce      json
+// @Param        id  path  string  true  "Subscription ID (UUID)"
+// @Success      204  "No Content"
+// @Failure      400  {object}  ErrorResponse
+// @Failure      404  {object}  ErrorResponse
+// @Router       /subscriptions/{id} [delete]
 func (h *Handler) DeleteSubscription(c *gin.Context) {
 	ctx := c.Request.Context()
 
@@ -218,16 +294,15 @@ func (h *Handler) DeleteSubscription(c *gin.Context) {
 	c.Status(http.StatusNoContent)
 }
 
-// ListSubscriptions godoc
 // @Summary      List subscriptions
-// @Description  Returns a list of all subscriptions with pagination
+// @Description  Returns a paginated list of all subscriptions
 // @Tags         subscriptions
 // @Produce      json
-// @Param        limit  query     int  false  "Number of rows per page"  default(10)
-// @Param        offset query     int  false  "Shift"                    default(0)
-// @Success      200    {array}   model.Subscription
-// @Failure      400    {object}  map[string]string
-// @Router       /api/v1/subscriptions [get]
+// @Param        limit  query  int  false  "Number of rows per page"  default(10)
+// @Param        offset query  int  false  "Offset for pagination"    default(0)
+// @Success      200  {object}  ListSubscriptionsResponse
+// @Failure      400  {object}  ErrorResponse
+// @Router       /subscriptions [get]
 func (h *Handler) ListSubscriptions(c *gin.Context) {
 	ctx := c.Request.Context()
 
@@ -265,6 +340,17 @@ func (h *Handler) ListSubscriptions(c *gin.Context) {
 	})
 }
 
+// @Summary      Get subscription stats
+// @Description  Calculate total cost of subscriptions for a user within a date range, optionally filtered by service name
+// @Tags         subscriptions
+// @Produce      json
+// @Param        user_id      query  string  true   "User ID (UUID)"
+// @Param        service_name query  string  false  "Filter by service name (partial match)"
+// @Param        start_date   query  string  true   "Start date (YYYY-MM)"
+// @Param        end_date     query  string  true   "End date (YYYY-MM)"
+// @Success      200  {object}  GetStatsResponse
+// @Failure      400  {object}  ErrorResponse
+// @Router       /subscriptions/stats [get]
 func (h *Handler) GetStats(c *gin.Context) {
 	ctx := c.Request.Context()
 

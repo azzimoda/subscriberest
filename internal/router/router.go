@@ -3,6 +3,8 @@ package router
 import (
 	"github.com/azzimoda/subscriberest/internal/handler"
 	"github.com/gin-gonic/gin"
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
 )
 
 func Init(h *handler.Handler) *gin.Engine {
@@ -18,6 +20,8 @@ func Init(h *handler.Handler) *gin.Engine {
 
 		api.GET("/subscriptions/stats", h.GetStats)
 	}
+
+	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
 	return r
 }
