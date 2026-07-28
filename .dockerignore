@@ -1,0 +1,11 @@
+.*
+!.
+
+Dockerfile
+compose.yaml
+
+storage/
+logs/
+
+README.md
+LICENSE
