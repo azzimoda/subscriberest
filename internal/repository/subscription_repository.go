@@ -19,12 +19,12 @@ type SubscriptionRepository interface {
 	Update(context.Context, *model.Subscription) error
 	Delete(context.Context, uuid.UUID) error
 	List(ctx context.Context, limit, offset int) ([]model.Subscription, error)
-	GetAllByUserIDServiceNamePeriod(
+	GetTotalPriceByUserNamePeriod(
 		ctx context.Context,
 		userID uuid.UUID,
 		serviceName string,
 		startDate, endDate time.Time,
-	) ([]model.Subscription, error)
+	) (int, error)
 }
 
 type subscriptionRepository struct{ db *gorm.DB }
@@ -67,20 +67,20 @@ func (r *subscriptionRepository) List(ctx context.Context, limit, offset int) ([
 	return subs, tx.Error
 }
 
-func (r *subscriptionRepository) GetAllByUserIDServiceNamePeriod(
+func (r *subscriptionRepository) GetTotalPriceByUserNamePeriod(
 	ctx context.Context,
 	userID uuid.UUID,
 	serviceName string,
 	startDate, endDate time.Time,
-) ([]model.Subscription, error) {
-	var subs []model.Subscription
-	q := r.db.WithContext(ctx).
-		Where("user_id = ?", userID).
-		Where("start_date <= ?", endDate).
-		Where("(end_date IS NULL OR end_date >= ?)", startDate)
-	if serviceName != "" {
-		q = q.Where("service ILIKE ?", "%"+serviceName+"%")
-	}
-	tx := q.Order("start_date DESC").Find(&subs)
-	return subs, tx.Error
+) (int, error) {
+	var total int
+	q := `SELECT COALESCE(SUM(s.price), 0) AS total
+		FROM subscriptions s
+		CROSS JOIN generate_series(?::date, ?::date, '1 month'::interval) AS g(m)
+		WHERE s.user_id = ?
+			AND (? = '' OR s.service ILIKE '%' || ? || '%')
+			AND s.start_date <= g.m::date
+			AND (s.end_date IS NULL OR s.end_date >= g.m::date)`
+	tx := r.db.WithContext(ctx).Raw(q, startDate, endDate, userID, serviceName, serviceName).Scan(&total)
+	return total, tx.Error
 }

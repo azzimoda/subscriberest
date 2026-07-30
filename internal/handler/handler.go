@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"net/http"
@@ -14,9 +15,18 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-func NewHandler(service *service.SubscriptionService) *Handler { return &Handler{service: service} }
+type Service interface {
+	Create(context.Context, *model.Subscription) error
+	GetByID(context.Context, uuid.UUID) (*model.Subscription, error)
+	Update(context.Context, *model.Subscription) error
+	Delete(context.Context, uuid.UUID) error
+	List(ctx context.Context, limit, offset int) ([]model.Subscription, error)
+	GetTotalPriceByUserNamePeriod(ctx context.Context, userID uuid.UUID, serviceName string, startDate, endDate time.Time) (int, error)
+}
 
-type Handler struct{ service *service.SubscriptionService }
+func NewHandler(svc Service) *Handler { return &Handler{service: svc} }
+
+type Handler struct{ service Service }
 
 type CreateSubscriptionRequest struct {
 	ServiceName string    `json:"service_name" example:"Netflix"`
@@ -116,7 +126,11 @@ func (h *Handler) CreateSubscription(c *gin.Context) {
 		StartDate: startDate,
 		EndDate:   endDate,
 	}
-	h.service.Create(ctx, &sub)
+	if err := h.service.Create(ctx, &sub); err != nil {
+		log.Error().Err(err).Msg("Failed to create subscription")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
+		return
+	}
 
 	log.Info().Any("subscription", sub).Msg("Created subscription")
 	c.JSON(http.StatusCreated, gin.H{"id": sub.ID.String(), "message": "created"})
@@ -404,7 +418,7 @@ func (h *Handler) GetStats(c *gin.Context) {
 		log.Error().Err(err).Str("uuid", userIDStr).Str("serviceName", serviceName).
 			Str("start_date", startDateStr).Str("end_date", endDateStr).
 			Msg("Internal error")
-		c.JSON(http.StatusBadRequest, gin.H{"error": "internal server error"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
 		return
 	}
 

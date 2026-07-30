@@ -6,6 +6,7 @@ COPY go.mod go.sum ./
 RUN go mod download
 
 COPY . .
+RUN go install github.com/swaggo/swag/cmd/swag@v1.16.6 && go generate ./...
 RUN go build -o ./main ./cmd/server
 
 EXPOSE 8080

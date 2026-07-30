@@ -7,6 +7,8 @@ import (
 	"github.com/azzimoda/subscriberest/internal/model"
 )
 
+func ptrTime(t time.Time) *time.Time { return &t }
+
 func TestParseSubscriptionDate(t *testing.T) {
 	tests := []struct {
 		name string // description of this test case
@@ -51,7 +53,7 @@ func TestSubscription_IsActiveAt(t *testing.T) {
 			"2026-07 in 2026-07..2026-07 true",
 			model.Subscription{
 				StartDate: model.MustParseSubscriptionDate("2026-07"),
-				EndDate:   new(model.MustParseSubscriptionDate("2026-07")),
+				EndDate:   		ptrTime(model.MustParseSubscriptionDate("2026-07")),
 			},
 			model.MustParseSubscriptionDate("2026-07"),
 			true,
@@ -60,7 +62,7 @@ func TestSubscription_IsActiveAt(t *testing.T) {
 			"2026-07 in 2026-07..2026-08 true",
 			model.Subscription{
 				StartDate: model.MustParseSubscriptionDate("2026-07"),
-				EndDate:   new(model.MustParseSubscriptionDate("2026-08")),
+				EndDate:   		ptrTime(model.MustParseSubscriptionDate("2026-08")),
 			},
 			model.MustParseSubscriptionDate("2026-07"),
 			true,
@@ -69,7 +71,7 @@ func TestSubscription_IsActiveAt(t *testing.T) {
 			"2026-08 in 2026-07..2026-08 true",
 			model.Subscription{
 				StartDate: model.MustParseSubscriptionDate("2026-07"),
-				EndDate:   new(model.MustParseSubscriptionDate("2026-08")),
+				EndDate:   		ptrTime(model.MustParseSubscriptionDate("2026-08")),
 			},
 			model.MustParseSubscriptionDate("2026-08"),
 			true,
@@ -78,7 +80,7 @@ func TestSubscription_IsActiveAt(t *testing.T) {
 			"2026-08 in 2026-07..2026-09 true",
 			model.Subscription{
 				StartDate: model.MustParseSubscriptionDate("2026-07"),
-				EndDate:   new(model.MustParseSubscriptionDate("2026-09")),
+				EndDate:   		ptrTime(model.MustParseSubscriptionDate("2026-09")),
 			},
 			model.MustParseSubscriptionDate("2026-08"),
 			true,
@@ -87,7 +89,7 @@ func TestSubscription_IsActiveAt(t *testing.T) {
 			"2026-01 in 2026-07..2026-09 false",
 			model.Subscription{
 				StartDate: model.MustParseSubscriptionDate("2026-07"),
-				EndDate:   new(model.MustParseSubscriptionDate("2026-09")),
+				EndDate:   		ptrTime(model.MustParseSubscriptionDate("2026-09")),
 			},
 			model.MustParseSubscriptionDate("2026-01"),
 			false,
@@ -96,7 +98,7 @@ func TestSubscription_IsActiveAt(t *testing.T) {
 			"2026-12 in 2026-07..2026-09 false",
 			model.Subscription{
 				StartDate: model.MustParseSubscriptionDate("2026-07"),
-				EndDate:   new(model.MustParseSubscriptionDate("2026-09")),
+				EndDate:   		ptrTime(model.MustParseSubscriptionDate("2026-09")),
 			},
 			model.MustParseSubscriptionDate("2026-12"),
 			false,

@@ -9,7 +9,6 @@ import (
 	"github.com/azzimoda/subscriberest/internal/model"
 	"github.com/azzimoda/subscriberest/internal/repository"
 	"github.com/google/uuid"
-	"github.com/rs/zerolog/log"
 	"gorm.io/gorm"
 )
 
@@ -59,24 +58,5 @@ func (s *SubscriptionService) GetTotalPriceByUserNamePeriod(
 	serviceName string,
 	startDate, endDate time.Time,
 ) (int, error) {
-	subs, err := s.repo.GetAllByUserIDServiceNamePeriod(ctx, userID, serviceName, startDate, endDate)
-	if err != nil {
-		return 0, err
-	}
-	log.Trace().Any("subscriptions", subs).Msg("Got all subscriptions by filters")
-
-	total := 0
-	d := startDate
-	for d.Before(endDate) || d.Equal(endDate) {
-		for _, sub := range subs {
-			if sub.IsActiveAt(d) {
-				total += sub.Price
-			}
-		}
-
-		d = d.AddDate(0, 1, 0)
-	}
-	log.Trace().Int("total", total).Msg("Collected prices")
-
-	return total, nil
+	return s.repo.GetTotalPriceByUserNamePeriod(ctx, userID, serviceName, startDate, endDate)
 }
